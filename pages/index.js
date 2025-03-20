@@ -1,5 +1,21 @@
 import Image from "next/image";
 import { Geist, Geist_Mono } from "next/font/google";
+import {
+  Container,
+  Typography,
+  TextField,
+  Button,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+} from "@mui/material";
+import { useState, useEffect } from "react";
+// import { db } from "./api/hello";
+import { db, collection, addDoc, getDocs } from "./api/hello";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -12,102 +28,182 @@ const geistMono = Geist_Mono({
 });
 
 export default function Home() {
+  const [items, setItems] = useState([]);
+  console.log("🚀 ~ Home ~ items:", items);
+  const [newItem, setNewItem] = useState({ name: "", qty: "", rate: "" });
+  const [gst, setGst] = useState(5);
+  const [invoices, setInvoices] = useState([]);
+
+  // Calculate totals
+  const subtotal = items.reduce((sum, item) => sum + item.qty * item.rate, 0);
+  const gstAmount = (subtotal * gst) / 100;
+  const netAmount = subtotal + gstAmount;
+
+  // Add item to the list
+  const addItem = () => {
+    if (!newItem.name || !newItem.qty || !newItem.rate) {
+      alert("Please enter all item details");
+      return;
+    }
+
+    setItems([
+      ...items,
+      {
+        ...newItem,
+        qty: parseFloat(newItem.qty),
+        rate: parseFloat(newItem.rate),
+      },
+    ]);
+    setNewItem({ name: "", qty: "", rate: "" });
+  };
+
+  // Save Invoice to Firestore
+  const saveInvoice = async () => {
+    if (items.length === 0) {
+      alert("Add at least one item!");
+      return;
+    }
+
+    try {
+      items?.map(async (item) => {
+        const invoiceData = {
+          total: subtotal,
+          gst: gstAmount,
+          itemTotal: item.rate,
+          itemGst: (item.rate * gst) / 100,
+          timestamp: new Date(),
+          itemName: item.name,
+          qty: item?.qty,
+        };
+
+        await addDoc(collection(db, "billing"), invoiceData);
+      });
+
+      alert("Invoice Saved in Firebase!");
+      fetchInvoices();
+      setItems([]); // Clear items after saving
+    } catch (error) {
+      console.error("Error saving invoice:", error);
+    }
+  };
+
+  // Fetch Invoices from Firestore
+  const fetchInvoices = async () => {
+    const querySnapshot = await getDocs(collection(db, "billing"));
+    const invoicesData = querySnapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+    setInvoices(invoicesData);
+  };
+
+  useEffect(() => {
+    fetchInvoices();
+  }, []);
+
+  // Print Invoice
+  const printInvoice = () => {
+    window.print();
+  };
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
+    <Container maxWidth="md">
+      <Typography variant="h4" gutterBottom>
+        Billing System
+      </Typography>
+
+      {/* Input for New Item */}
+      <div style={{ display: "flex", gap: "10px", marginBottom: "20px" }}>
+        <TextField
+          label="Item Name"
+          variant="outlined"
+          fullWidth
+          value={newItem.name}
+          onChange={(e) => setNewItem({ ...newItem, name: e.target.value })}
+          style={{ backgroundColor: "#f5f5f5" }}
         />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              pages/index.js
-            </code>
-            .
+        <TextField
+          label="Qty"
+          variant="outlined"
+          type="number"
+          style={{ backgroundColor: "#f5f5f5" }}
+          value={newItem.qty}
+          onChange={(e) => setNewItem({ ...newItem, qty: e.target.value })}
+        />
+        <TextField
+          label="Rate"
+          variant="outlined"
+          style={{ backgroundColor: "#f5f5f5" }}
+          type="number"
+          value={newItem.rate}
+          onChange={(e) => setNewItem({ ...newItem, rate: e.target.value })}
+        />
+        <Button variant="contained" color="primary" onClick={addItem}>
+          Add Item
+        </Button>
+      </div>
+
+      {/* Invoice Table */}
+      <TableContainer component={Paper}>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>Item</TableCell>
+              <TableCell>Qty</TableCell>
+              <TableCell>Rate</TableCell>
+              <TableCell>Total</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {items.map((item, i) => (
+              <TableRow key={i}>
+                <TableCell>{item.name}</TableCell>
+                <TableCell>{item.qty}</TableCell>
+                <TableCell>{item.rate}</TableCell>
+                <TableCell>{item.qty * item.rate}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+
+      {/* Totals */}
+      <Typography variant="h6" style={{ marginTop: "20px" }}>
+        Subtotal: ₹{subtotal}
+      </Typography>
+      <Typography>
+        GST ({gst}%): ₹{gstAmount}
+      </Typography>
+      <Typography variant="h6" style={{ fontWeight: "bold" }}>
+        Net Amount: ₹{netAmount}
+      </Typography>
+
+      {/* Buttons */}
+      <div style={{ marginTop: "20px" }}>
+        <Button
+          variant="contained"
+          color="primary"
+          onClick={saveInvoice}
+          style={{ marginRight: "10px" }}
+        >
+          Save Invoice
+        </Button>
+        <Button variant="contained" color="secondary" onClick={printInvoice}>
+          Print Invoice
+        </Button>
+      </div>
+
+      {/* Invoice List */}
+      <Typography variant="h5" style={{ marginTop: "30px" }}>
+        Saved Invoices
+      </Typography>
+      <ul>
+        {invoices.map((invoice) => (
+          <li key={invoice.id}>
+            Invoice: ₹{invoice.total} (GST: ₹{invoice.gst})
           </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+        ))}
+      </ul>
+    </Container>
   );
 }
