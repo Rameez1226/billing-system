@@ -34,12 +34,15 @@ export default function Home() {
   const [gst, setGst] = useState(5);
   const [invoices, setInvoices] = useState([]);
 
-  // Calculate totals
   const subtotal = items.reduce((sum, item) => sum + item.qty * item.rate, 0);
-  const gstAmount = (subtotal * gst) / 100;
-  const netAmount = subtotal + gstAmount;
+  const gstAmount = (subtotal * (gst / 2)) / 100;
+  const cgstAmount = (subtotal * (gst / 2)) / 100;
 
-  // Add item to the list
+  const amountBeforeRoundOff = subtotal + gstAmount + cgstAmount;
+
+  const roundOff = Math.round(amountBeforeRoundOff) - amountBeforeRoundOff;
+  const netAmount = amountBeforeRoundOff + roundOff;
+
   const addItem = () => {
     if (!newItem.name || !newItem.qty || !newItem.rate) {
       alert("Please enter all item details");
@@ -107,7 +110,7 @@ export default function Home() {
   };
 
   const [invoiceData, setInvoiceData] = useState({
-    gstin: "32AEVFS5627Q1Z2",
+    gstin: "32AVAPT8082AIZS",
     eWayBillNo: "",
     pan: "AEVFS5627Q",
     transportationMode: "Road",
@@ -155,27 +158,89 @@ export default function Home() {
       />
     </div>
   );
+
   const printStyles = `
   @media print {
     .no-print {
       display: none !important;
     }
+    .table-container {
+      page-break-inside: avoid;
+      page-break-after: auto;
+    }
+    .window{
+      padding: 5px 0px;
+    }
+    body {
+      zoom: 1;
+      font-size: 12px; /* adjust font size as needed */
+    }
+    a {
+      color: black !important; /* Keep links styled like regular text */
+      text-decoration: none !important; /* Remove underline */
+    }
+    a::after {
+      content: "" !important; /* Prevents URLs from appearing */
+    }
+    a[href]:after {
+      content: "" !important; /* Remove appended URLs */
+    }
+    @page {
+      size: auto;
+      margin: 0;
+      padding: 20px 30px;
+    }
   }
 `;
 
-  // /* Ensure the invoice content is printed clearly */
-  // .print-only {
-  //   display: block;
-  // }
-
-  // /* Add any other print-specific styles here */
-  // body {
-  //   padding: 20px;
-  // }
+  const styles = {
+    container: {
+      fontFamily: "Arial, sans-serif",
+      // maxWidth: "100%",
+      width: "100%",
+      // margin: "0 auto",
+      padding: "20px",
+      marginLeft: "auto",
+      display: "flex",
+      backgroundColor: "#fff",
+    },
+    table: {
+      width: "100%",
+      borderCollapse: "collapse",
+    },
+    labelCell: {
+      padding: "8px",
+      color: "#555",
+      fontWeight: "500",
+      borderBottom: "1px solid #eee",
+      textAlign: "left",
+    },
+    valueCell: {
+      padding: "8px",
+      color: "#333",
+      borderBottom: "1px solid #eee",
+      textAlign: "right",
+    },
+    spacerRow: {
+      height: "16px",
+    },
+  };
 
   return (
-    <div className="window">
+    <div className="window table-container">
       <style dangerouslySetInnerHTML={{ __html: printStyles }} />
+      <Typography
+        variant="h2"
+        gutterBottom
+        className="text-center"
+        style={{ marginBottom: "0px" }}
+      >
+        P.T SPICES
+      </Typography>
+      <Typography variant="h6" gutterBottom className="text-center">
+        VELLUVANGAD SOUTH. Ρ.Ο, PANDIKKAD - 676 521 MALAPPURAM Dt., KERALA, Mob:
+        9496841060, 9037661765
+      </Typography>
       <Typography variant="h4" gutterBottom className="text-center">
         Tax Invoice
       </Typography>
@@ -587,7 +652,7 @@ export default function Home() {
         {/* Input for New Item */}
         <div
           style={{ display: "flex", gap: "10px", marginBottom: "20px" }}
-          className="no-print"
+          className="no-print bgNone"
         >
           <TextField
             label="Item Name"
@@ -619,39 +684,80 @@ export default function Home() {
         </div>
 
         {/* Invoice Table */}
-        <TableContainer component={Paper}>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>Item</TableCell>
-                <TableCell>Qty</TableCell>
-                <TableCell>Rate</TableCell>
-                <TableCell>Total</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {items.map((item, i) => (
-                <TableRow key={i}>
-                  <TableCell>{item.name}</TableCell>
-                  <TableCell>{item.qty}</TableCell>
-                  <TableCell>{item.rate}</TableCell>
-                  <TableCell>{item.qty * item.rate}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
+        {items?.length > 0 && (
+          <>
+            <TableContainer component={Paper} className="table-container">
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Item</TableCell>
+                    <TableCell>Qty</TableCell>
+                    <TableCell>Rate</TableCell>
+                    <TableCell>Total</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {items.map((item, i) => (
+                    <TableRow key={i}>
+                      <TableCell>{item.name}</TableCell>
+                      <TableCell>{item.qty}</TableCell>
+                      <TableCell>{item.rate}</TableCell>
+                      <TableCell>{item.qty * item.rate}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
 
-        {/* Totals */}
-        <Typography variant="h6" style={{ marginTop: "20px" }}>
-          Subtotal: ₹{subtotal}
-        </Typography>
-        <Typography>
-          GST {"->"} CGST + SGST ({gst}%): ₹{gstAmount}
-        </Typography>
-        <Typography variant="h6" style={{ fontWeight: "bold" }}>
-          Net Amount: ₹{netAmount}
-        </Typography>
+            <div style={styles.container} className="table-container">
+              <div style={{ width: "70%" }}></div>
+              <div style={{ width: "30%" }}>
+                <table style={styles.table}>
+                  <tbody>
+                    <tr>
+                      <td style={styles.labelCell}>Less Discount:</td>
+                      <td style={styles.valueCell}>0.00</td>
+                    </tr>
+                    <tr>
+                      <td style={styles.labelCell}>Net Value:</td>
+                      <td style={styles.valueCell}>{subtotal}</td>
+                    </tr>
+
+                    <tr style={styles.spacerRow}>
+                      <td colSpan="2"></td>
+                    </tr>
+
+                    <tr>
+                      <td style={styles.labelCell}>CGST Collected:</td>
+                      <td style={styles.valueCell}>{gstAmount}</td>
+                    </tr>
+                    <tr>
+                      <td style={styles.labelCell}>SGST Collected:</td>
+                      <td style={styles.valueCell}>{cgstAmount}</td>
+                    </tr>
+
+                    <tr style={styles.spacerRow}>
+                      <td colSpan="2"></td>
+                    </tr>
+
+                    <tr>
+                      <td style={styles.labelCell}>Round Off:</td>
+                      <td style={styles.valueCell}>{roundOff.toFixed(2)}</td>
+                    </tr>
+                    <tr>
+                      <td style={{ ...styles.labelCell, fontWeight: "bold" }}>
+                        Net Amount:
+                      </td>
+                      <td style={{ ...styles.valueCell, fontWeight: "bold" }}>
+                        {netAmount.toFixed(2)}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>
+        )}
 
         {/* Buttons */}
         <div style={{ marginTop: "20px" }} className="no-print">
@@ -660,16 +766,22 @@ export default function Home() {
             color="primary"
             onClick={saveInvoice}
             style={{ marginRight: "10px" }}
+            disabled={items?.length === 0}
           >
             Save Invoice
           </Button>
-          <Button variant="contained" color="secondary" onClick={printInvoice}>
+          <Button
+            variant="contained"
+            color="secondary"
+            onClick={printInvoice}
+            disabled={items?.length === 0}
+          >
             Print Invoice
           </Button>
         </div>
 
         {/* Invoice List */}
-        <Typography variant="h5" style={{ marginTop: "30px" }}>
+        {/* <Typography variant="h5" style={{ marginTop: "30px" }}>
           Saved Invoices
         </Typography>
         <ul>
@@ -678,7 +790,7 @@ export default function Home() {
               Invoice: ₹{invoice.total} (GST: ₹{invoice.gst})
             </li>
           ))}
-        </ul>
+        </ul> */}
       </Container>
     </div>
   );
