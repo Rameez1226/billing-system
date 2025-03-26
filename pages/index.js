@@ -39,10 +39,43 @@ export default function Home() {
   const [gst, setGst] = useState(5);
   const [invoices, setInvoices] = useState([]);
   const [billStatus, setBillStatus] = useState(true);
-
+  const [invoiceData, setInvoiceData] = useState({
+    gstin: "32AVAPT8082AIZS",
+    eWayBillNo: "",
+    pan: "AEVFS5627Q",
+    transportationMode: "Road",
+    reverseCharge: "No",
+    vehicleNo: "",
+    invoiceNo: "SE/24-25/17",
+    poNo: "",
+    dateOfSupply: "12/Sep/2024",
+    invoiceDate: "12/Sep/2024",
+    poDate: "",
+    placeOfSupply: "",
+    billedToName: "P T SPICES",
+    billedToAddress: "VELLUVANGAD SOUTH P.O PANDIKKAD, MALAPPURAM",
+    billedToPhone: "",
+    billedToMobile: "9496841060",
+    billedToState: "Kerala",
+    billedToPan: "",
+    billedToGstin: "32AVAPT8082A1ZS",
+    shippedToName: "P T SPICES",
+    shippedToAddress: "VELLUVANGAD SOUTH P.O PANDIKKAD, MALAPPURAM",
+    shippedToPhone: "",
+    shippedToMobile: "9496841060",
+    shippedToState: "Kerala",
+    shippedToPan: "",
+    shippedToGstin: "32AVAPT8082A1ZS",
+  });
   const subtotal = items.reduce((sum, item) => sum + item.qty * item.rate, 0);
-  const gstAmount = (subtotal * ((gst || 5) / 2)) / 100;
-  const cgstAmount = (subtotal * ((gst || 5) / 2)) / 100;
+  const gstAmount =
+    (subtotal *
+      ((gst || 5) / (invoiceData?.shippedToState == "Kerala" ? 2 : 1))) /
+    100;
+  const cgstAmount =
+    invoiceData?.shippedToState == "Kerala"
+      ? (subtotal * ((gst || 5) / 2)) / 100
+      : 0;
 
   const amountBeforeRoundOff = subtotal + gstAmount + cgstAmount;
 
@@ -117,35 +150,6 @@ export default function Home() {
     saveInvoice();
     window.print();
   };
-
-  const [invoiceData, setInvoiceData] = useState({
-    gstin: "32AVAPT8082AIZS",
-    eWayBillNo: "",
-    pan: "AEVFS5627Q",
-    transportationMode: "Road",
-    reverseCharge: "No",
-    vehicleNo: "",
-    invoiceNo: "SE/24-25/17",
-    poNo: "",
-    dateOfSupply: "12/Sep/2024",
-    invoiceDate: "12/Sep/2024",
-    poDate: "",
-    placeOfSupply: "",
-    billedToName: "P T SPICES",
-    billedToAddress: "VELLUVANGAD SOUTH P.O PANDIKKAD, MALAPPURAM",
-    billedToPhone: "",
-    billedToMobile: "9496841060",
-    billedToState: "32-KERALA",
-    billedToPan: "",
-    billedToGstin: "32AVAPT8082A1ZS",
-    shippedToName: "P T SPICES",
-    shippedToAddress: "VELLUVANGAD SOUTH P.O PANDIKKAD, MALAPPURAM",
-    shippedToPhone: "",
-    shippedToMobile: "9496841060",
-    shippedToState: "32-KERALA",
-    shippedToPan: "",
-    shippedToGstin: "32AVAPT8082A1ZS",
-  });
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -333,6 +337,49 @@ export default function Home() {
 
   // Extracting all unique keys from the invoice objects
   const allKeys = Array.from(new Set(invoices.flatMap(Object.keys)));
+
+  const deleteItem = (index) => {
+    setItems((prevInvoices) => prevInvoices.filter((_, i) => i !== index));
+  };
+
+  const indianStates = [
+    "Andhra Pradesh",
+    "Arunachal Pradesh",
+    "Assam",
+    "Bihar",
+    "Chhattisgarh",
+    "Goa",
+    "Gujarat",
+    "Haryana",
+    "Himachal Pradesh",
+    "Jharkhand",
+    "Karnataka",
+    "Kerala",
+    "Madhya Pradesh",
+    "Maharashtra",
+    "Manipur",
+    "Meghalaya",
+    "Mizoram",
+    "Nagaland",
+    "Odisha",
+    "Punjab",
+    "Rajasthan",
+    "Sikkim",
+    "Tamil Nadu",
+    "Telangana",
+    "Tripura",
+    "Uttar Pradesh",
+    "Uttarakhand",
+    "West Bengal",
+    "Andaman and Nicobar Islands",
+    "Chandigarh",
+    "Dadra and Nagar Haveli and Daman and Diu",
+    "Lakshadweep",
+    "Delhi",
+    "Puducherry",
+    "Ladakh",
+    "Jammu and Kashmir",
+  ];
 
   return (
     <div className="window table-container">
@@ -695,13 +742,20 @@ export default function Home() {
                   <td className="border border-gray-300 p-2">
                     <div className="flex items-center">
                       <strong>State:</strong>
-                      <input
-                        type="text"
+                      <select
                         name="billedToState"
                         className="ml-1 w-full border-none bg-transparent p-0 focus:outline-none focus:ring-0"
                         value={invoiceData.billedToState}
+                        style={{ color: "#393939" }}
                         onChange={handleChange}
-                      />
+                      >
+                        <option value="">Select State</option>
+                        {indianStates?.map((state) => (
+                          <option key={state} value={state}>
+                            {state}
+                          </option>
+                        ))}
+                      </select>
                     </div>
                   </td>
                   <td className="border border-gray-300 p-2">
@@ -727,13 +781,20 @@ export default function Home() {
                             >
                               <div className="flex items-center">
                                 <strong>State:</strong>
-                                <input
-                                  type="text"
+                                <select
                                   name="shippedToState"
                                   className="ml-1 w-full border-none bg-transparent p-0 focus:outline-none focus:ring-0"
                                   value={invoiceData.shippedToState}
                                   onChange={handleChange}
-                                />
+                                  style={{ color: "#393939" }}
+                                >
+                                  <option value="">Select State</option>
+                                  {indianStates.map((state) => (
+                                    <option key={state} value={state}>
+                                      {state}
+                                    </option>
+                                  ))}
+                                </select>
                               </div>
                             </td>
                             <td>
@@ -925,6 +986,18 @@ export default function Home() {
                           <TableCell>{item.qty}</TableCell>
                           <TableCell>{item.rate}</TableCell>
                           <TableCell>{item.qty * item.rate}</TableCell>
+                          <TableCell
+                            onClick={() => deleteItem(i)}
+                            style={{
+                              cursor: "pointer",
+                              color: "red",
+                              textAlign: "center",
+                              borderTop: "1px solid #ccc",
+                              fontWeight: "bold",
+                            }}
+                          >
+                            Delete
+                          </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
